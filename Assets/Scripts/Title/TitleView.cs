@@ -9,9 +9,16 @@ public class TitleView : MonoBehaviour
 {
     public Image fadeimage;
     public GameObject option;
-    
+
+    public void Start()
+    {
+        SoundManager.Instance.PlayBGM("TitleBGM");
+    }
+
     public void StartGame()
     {
+        SoundManager.Instance.PlaySFX("click");
+
         fadeimage.DOFade(1, 0.5f).From(0)
             .OnStart(() => { fadeimage.gameObject.SetActive(true); })
             .OnComplete(() => { SceneManager.LoadScene("1_Game"); });
@@ -20,10 +27,12 @@ public class TitleView : MonoBehaviour
     public void OptionOn()
     {
         option.SetActive(true);
+        SoundManager.Instance.PlaySFX("click");
     }
 
     public void OptionOff()
     {
         option.SetActive(false);
+        SoundManager.Instance.PlaySFX("click");
     }
 }
