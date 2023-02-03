@@ -17,6 +17,10 @@ public class GameManager : MonoBehaviour
     public TileBase blueFillTile;
     public TileBase grayFillTile;
 
+    public int[] redUnitCount;
+    public int[] blueUnitCount;
+
+
     [Header("")] public GameObject redUnitGameObject;
     public GameObject blueUnitGameObject;
 
@@ -41,6 +45,10 @@ public class GameManager : MonoBehaviour
 
         teams.Add(new Vector2Int(-8, 8), Team.Red);
         AttackTile(new Vector2Int(-8, 8), Team.Red);
+
+        for (int i = 0; i < redUnitCount.Length; i++)_gameView.SetRedTeamUnitCount(i,redUnitCount[i]);
+        for (int i = 0; i < blueUnitCount.Length; i++)_gameView.SetBlueTeamUnitCount(i,blueUnitCount[i]);
+
     }
 
     private readonly List<Vector2Int> attackPosts = new List<Vector2Int>()
@@ -74,6 +82,10 @@ public class GameManager : MonoBehaviour
             .Select(p => p + (Vector2Int)cellPos)
             .Count(p => fillTilemap.GetTile((Vector3Int)p) && ((teamTurn == Team.Red && power[p] > 0) ||
                                                                (teamTurn == Team.Blue && power[p] < 0)));
+        if ((teamTurn == Team.Red ? redUnitCount[redUnitIndex] : blueUnitCount[blueUnitIndex]) <= 0)
+        {
+            return;
+        }
 
         if (mapTilemap.GetTile(cellPos) == null || teams.ContainsKey((Vector2Int)cellPos) || count == 0 ||
             fillTilemap.GetTile(cellPos) == grayFillTile)
@@ -84,6 +96,9 @@ public class GameManager : MonoBehaviour
         GameUpdate(teamTurn, new Vector2Int(cellPos.x, cellPos.y));
         turn += 1;
         _gameView.SetTurnText(turn);
+        
+        for (int i = 0; i < redUnitCount.Length; i++)_gameView.SetRedTeamUnitCount(i,redUnitCount[i]);
+        for (int i = 0; i < blueUnitCount.Length; i++)_gameView.SetBlueTeamUnitCount(i,blueUnitCount[i]);
     }
 
 
@@ -107,6 +122,10 @@ public class GameManager : MonoBehaviour
             mapTilemap.GetCellCenterWorld((Vector3Int)pos),
             Quaternion.identity
         ).transform.DOScaleY(1, 0.65f).From(0).SetEase(Ease.OutQuint);
+
+        if (teamTurn == Team.Red) redUnitCount[redUnitIndex] -= 1;
+        else blueUnitCount[blueUnitIndex] -= 1;
+
         _units.Add(new AttackEvent { AttackPos = unit.AttackPos, Pos = pos, Turn = unit.Turn, Team = teamTurn });
         teams.Add(pos, teamTurn);
 
