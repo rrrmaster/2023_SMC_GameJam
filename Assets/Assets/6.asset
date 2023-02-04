@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ede3d182b402e4254924c522cfd474be, type: 3}
   m_Name: 6
   m_EditorClassIdentifier: 
-  Turn: 3
+  Turn: 1
   AttackPos:
   - {x: 1, y: 2}
   - {x: -1, y: 2}

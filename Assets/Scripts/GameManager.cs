@@ -18,6 +18,7 @@ public class GameManager : MonoBehaviour
     public TileBase blueFillTile;
     public TileBase grayFillTile;
     public TileBase rangeTile;
+    public TileBase seedRangeTile;
 
     public int[] redUnitCount;
     public int[] blueUnitCount;
@@ -78,28 +79,48 @@ public class GameManager : MonoBehaviour
         _gameView.SetTurnChanged();
     }
 
+    private bool IsPointerOverUIObject()
+    {
+        PointerEventData eventDataCurrentPosition = new PointerEventData(EventSystem.current);
+        eventDataCurrentPosition.position = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+        return results.Count > 0;
+    }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+        if (Input.GetMouseButtonDown(0) && !IsPointerOverUIObject())
         {
-            var cellPos = (Vector2Int)mapTilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            cursorPos = cellPos;
+            var screenToWorldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            var cellPos = (Vector2Int)mapTilemap.WorldToCell(screenToWorldPoint);
 
-
-            rangeTilemap.ClearAllTiles();
             var value = DOGetValue(cellPos);
+            rangeTilemap.ClearAllTiles();
+
 
             if (value)
             {
+                cursorPos = cellPos;
                 rangeTilemap.color =
                     TeamTurn == Team.Red ? new Color32(182, 67, 51, 255) : new Color32(75, 87, 104, 255);
-                rangeTilemap.SetTile((Vector3Int)cursorPos, rangeTile);
 
                 foreach (var VARIABLE in units[TeamTurn == Team.Red ? redUnitIndex : blueUnitIndex].AttackPos)
                 {
-                    rangeTilemap.SetTile((Vector3Int)(cursorPos + VARIABLE), rangeTile);
+                    var vector3Int = (Vector3Int)(cursorPos + VARIABLE);
+
+                    if (!IsGameMapRange((Vector2Int)vector3Int))
+                        continue;
+                    if (VARIABLE == Vector2Int.zero)
+                        rangeTilemap.SetTile(vector3Int, seedRangeTile);
+
+                    else
+                        rangeTilemap.SetTile(vector3Int, rangeTile);
                 }
+            }
+            else
+            {
+                cursorPos = null;
             }
 
             Debug.Log(cursorPos);

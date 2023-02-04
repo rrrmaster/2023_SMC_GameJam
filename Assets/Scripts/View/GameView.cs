@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,6 +14,8 @@ public class GameView : MonoBehaviour
 
     public Button redStartButton;
     public Button blueStartButton;
+    public RectTransform redPanel;
+    public RectTransform bluePanel;
 
     public void SetTurnText(int turn)
     {
@@ -21,18 +24,28 @@ public class GameView : MonoBehaviour
 
     public void SetRedTeamUnitCount(int index, int count, int maxCount)
     {
-        redTeamUnitButtons[index].SetCountText(count,maxCount);
+        redTeamUnitButtons[index].SetCountText(count, maxCount);
     }
 
     public void SetBlueTeamUnitCount(int index, int count, int maxCount)
     {
-        blueTeamUnitButtons[index].SetCountText(count,maxCount);
+        blueTeamUnitButtons[index].SetCountText(count, maxCount);
     }
 
     public void SetTurnChanged()
     {
         redStartButton.interactable = gameManager.TeamTurn == Team.Red;
         blueStartButton.interactable = gameManager.TeamTurn == Team.Blue;
+        if (gameManager.TeamTurn == Team.Red)
+        {
+            redPanel.DOAnchorPosX(0, 1.0f);
+            bluePanel.DOAnchorPosX(128, 1.0f);
+        }
+        else
+        {
+            redPanel.DOAnchorPosX(-128, 1.0f);
+            bluePanel.DOAnchorPosX(0, 1.0f);
+        }
     }
 
     public void SetComplateTurn()
