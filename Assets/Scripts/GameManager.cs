@@ -20,8 +20,8 @@ public class GameManager : MonoBehaviour
     public int[] redUnitCount;
     public int[] blueUnitCount;
 
-    public int[] cursorRedUnitCount;
-    public int[] cursorBlueUnitCount;
+    private int[] cursorRedUnitCount;
+    private int[] cursorBlueUnitCount;
 
 
     [Header("")] public GameObject redUnitGameObject;
@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour
 
     public int turn;
 
-    public Unit unit;
+    private Unit unit;
     public Unit[] units;
 
 
