@@ -12,10 +12,12 @@ public class GameManager : MonoBehaviour
 
     [Header("TileMap")] public Tilemap mapTilemap;
     public Tilemap fillTilemap;
+    public Tilemap rangeTilemap;
 
-    public TileBase redFIleTile;
+    [Header("Tile")] public TileBase redFIleTile;
     public TileBase blueFillTile;
     public TileBase grayFillTile;
+    public TileBase rangeTile;
 
     public int[] redUnitCount;
     public int[] blueUnitCount;
@@ -26,7 +28,6 @@ public class GameManager : MonoBehaviour
 
     [Header("")] public GameObject redUnitGameObject;
     public GameObject blueUnitGameObject;
-    public Transform createdPositionTransform;
 
     public int turn;
 
@@ -84,10 +85,23 @@ public class GameManager : MonoBehaviour
         {
             var cellPos = (Vector2Int)mapTilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
             cursorPos = cellPos;
-            createdPositionTransform.gameObject.SetActive(true);
-            createdPositionTransform.position = mapTilemap.CellToWorld((Vector3Int)cursorPos);
-            createdPositionTransform.GetComponent<SpriteRenderer>().color =
-                DOGetValue(cellPos) ? allowColor : notAllowColor;
+
+
+            rangeTilemap.ClearAllTiles();
+            var value = DOGetValue(cellPos);
+
+            if (value)
+            {
+                rangeTilemap.color =
+                    TeamTurn == Team.Red ? new Color32(182, 67, 51, 255) : new Color32(75, 87, 104, 255);
+                rangeTilemap.SetTile((Vector3Int)cursorPos, rangeTile);
+
+                foreach (var VARIABLE in units[TeamTurn == Team.Red ? redUnitIndex : blueUnitIndex].AttackPos)
+                {
+                    rangeTilemap.SetTile((Vector3Int)(cursorPos + VARIABLE), rangeTile);
+                }
+            }
+
             Debug.Log(cursorPos);
         }
     }
@@ -115,13 +129,12 @@ public class GameManager : MonoBehaviour
 
         GameUpdate(teamTurn, new Vector2Int(cellPos.x, cellPos.y));
         turn += 1;
-
-        createdPositionTransform.gameObject.SetActive(false);
+        rangeTilemap.ClearAllTiles();
 
         for (int i = 0; i < redUnitCount.Length; i++)
-            _gameView.SetRedTeamUnitCount(i, redUnitCount[i], cursorRedUnitCount[i]);
+            _gameView.SetRedTeamUnitCount(i, cursorRedUnitCount[i], redUnitCount[i]);
         for (int i = 0; i < blueUnitCount.Length; i++)
-            _gameView.SetBlueTeamUnitCount(i, blueUnitCount[i], cursorBlueUnitCount[i]);
+            _gameView.SetBlueTeamUnitCount(i, cursorBlueUnitCount[i], blueUnitCount[i]);
 
         _gameView.SetTurnText(turn);
         _gameView.SetTurnChanged();
@@ -169,8 +182,8 @@ public class GameManager : MonoBehaviour
             Quaternion.identity
         ).transform.DOScaleY(1, 0.65f).From(0).SetEase(Ease.OutQuint);
 
-        if (teamTurn == Team.Red) redUnitCount[redUnitIndex] -= 1;
-        else blueUnitCount[blueUnitIndex] -= 1;
+        if (teamTurn == Team.Red) cursorRedUnitCount[redUnitIndex] -= 1;
+        else cursorBlueUnitCount[blueUnitIndex] -= 1;
 
         _units.Add(new AttackEvent { AttackPos = unit.AttackPos, Pos = pos, Turn = unit.Turn, Team = teamTurn });
         teams.Add(pos, teamTurn);
