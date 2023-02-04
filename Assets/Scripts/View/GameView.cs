@@ -2,29 +2,43 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameView : MonoBehaviour
 {
     public TMP_Text turnText;
     public GameManager gameManager;
-    public GameObject[] redTeamUnitButtons;
-    public GameObject[] blueTeamUnitButtons;
+    public SeedCardView[] redTeamUnitButtons;
+    public SeedCardView[] blueTeamUnitButtons;
+
+    public Button redStartButton;
+    public Button blueStartButton;
 
     public void SetTurnText(int turn)
     {
         turnText.text = $"TURN\n<size=60>{turn}</size>";
     }
 
-    public void SetRedTeamUnitCount(int index, int count)
+    public void SetRedTeamUnitCount(int index, int count, int maxCount)
     {
-        redTeamUnitButtons[index].GetComponentInChildren<TMP_Text>().text = count.ToString();
-    }
-    
-    public void SetBlueTeamUnitCount(int index, int count)
-    {
-        blueTeamUnitButtons[index].GetComponentInChildren<TMP_Text>().text = count.ToString();
+        redTeamUnitButtons[index].SetCountText(count,maxCount);
     }
 
+    public void SetBlueTeamUnitCount(int index, int count, int maxCount)
+    {
+        blueTeamUnitButtons[index].SetCountText(count,maxCount);
+    }
+
+    public void SetTurnChanged()
+    {
+        redStartButton.interactable = gameManager.TeamTurn == Team.Red;
+        blueStartButton.interactable = gameManager.TeamTurn == Team.Blue;
+    }
+
+    public void SetComplateTurn()
+    {
+        gameManager.ComplateTurn();
+    }
 
     public void SetRedUnitIndex(int index)
     {
