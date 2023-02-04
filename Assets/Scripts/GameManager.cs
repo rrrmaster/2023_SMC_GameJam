@@ -1,9 +1,9 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Networking;
 using UnityEngine.Tilemaps;
 
 public class GameManager : MonoBehaviour
@@ -20,38 +20,29 @@ public class GameManager : MonoBehaviour
     public int[] redUnitCount;
     public int[] blueUnitCount;
 
+    public int[] cursorRedUnitCount;
+    public int[] cursorBlueUnitCount;
+
 
     [Header("")] public GameObject redUnitGameObject;
     public GameObject blueUnitGameObject;
+    public Transform createdPositionTransform;
 
     public int turn;
-    public Dictionary<Vector2Int, int> power;
-    public Dictionary<Vector2Int, Team> teams;
 
     public Unit unit;
-
     public Unit[] units;
-    private List<AttackEvent> _units = new();
+
+
     public int redUnitIndex;
     public int blueUnitIndex;
 
+    private List<AttackEvent> _units = new();
+    private Vector2Int? cursorPos = null;
+    private Dictionary<Vector2Int, int> power;
+    private Dictionary<Vector2Int, Team> teams;
 
-    private void Awake()
-    {
-        power = new Dictionary<Vector2Int, int>();
-        teams = new Dictionary<Vector2Int, Team>();
-        teams.Add(new Vector2Int(7, -7), Team.Blue);
-        AttackTile(new Vector2Int(7, -7), Team.Blue);
-
-        teams.Add(new Vector2Int(-8, 8), Team.Red);
-        AttackTile(new Vector2Int(-8, 8), Team.Red);
-
-        for (int i = 0; i < redUnitCount.Length; i++)_gameView.SetRedTeamUnitCount(i,redUnitCount[i]);
-        for (int i = 0; i < blueUnitCount.Length; i++)_gameView.SetBlueTeamUnitCount(i,blueUnitCount[i]);
-
-    }
-
-    private readonly List<Vector2Int> attackPosts = new List<Vector2Int>()
+    private readonly List<Vector2Int> attackPosts = new()
     {
         Vector2Int.down,
         Vector2Int.up,
@@ -63,46 +54,101 @@ public class GameManager : MonoBehaviour
         Vector2Int.up + Vector2Int.right,
     };
 
+    public RectInt size;
+
+    private void Awake()
+    {
+        GetTiles();
+        power = new Dictionary<Vector2Int, int>();
+        teams = new Dictionary<Vector2Int, Team>();
+        var vector2Int = new Vector2Int(size.xMax, size.yMin);
+        teams.Add(vector2Int, Team.Blue);
+        AttackTile(vector2Int, Team.Blue);
+        teams.Add(new Vector2Int(size.xMin, size.yMax), Team.Red);
+        AttackTile(new Vector2Int(size.xMin, size.yMax), Team.Red);
+        cursorRedUnitCount = redUnitCount.ToArray();
+        cursorBlueUnitCount = blueUnitCount.ToArray();
+
+        for (int i = 0; i < redUnitCount.Length; i++)
+            _gameView.SetRedTeamUnitCount(i, redUnitCount[i], cursorRedUnitCount[i]);
+        for (int i = 0; i < blueUnitCount.Length; i++)
+            _gameView.SetBlueTeamUnitCount(i, blueUnitCount[i], cursorBlueUnitCount[i]);
+
+        _gameView.SetTurnChanged();
+    }
+
+
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
         {
-            var cellPos = mapTilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-
-            DONewMethod(cellPos);
+            var cellPos = (Vector2Int)mapTilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            cursorPos = cellPos;
+            createdPositionTransform.gameObject.SetActive(true);
+            createdPositionTransform.position = mapTilemap.CellToWorld((Vector3Int)cursorPos);
+            createdPositionTransform.GetComponent<SpriteRenderer>().color =
+                DOGetValue(cellPos) ? allowColor : notAllowColor;
+            Debug.Log(cursorPos);
         }
     }
 
-    private void DONewMethod(Vector3Int cellPos)
+    public Color allowColor;
+    public Color notAllowColor;
+
+    public void ComplateTurn()
+    {
+        if (!cursorPos.HasValue)
+        {
+            return;
+        }
+
+        DONewMethod(cursorPos.Value);
+    }
+
+    private void DONewMethod(Vector2Int cellPos)
     {
         var teamTurn = turn % 2 == 0 ? Team.Red : Team.Blue;
         unit = units[teamTurn == Team.Red ? redUnitIndex : blueUnitIndex];
 
-        var count = attackPosts
-            .Select(p => p + (Vector2Int)cellPos)
-            .Count(p => fillTilemap.GetTile((Vector3Int)p) && ((teamTurn == Team.Red && power[p] > 0) ||
-                                                               (teamTurn == Team.Blue && power[p] < 0)));
-        if ((teamTurn == Team.Red ? redUnitCount[redUnitIndex] : blueUnitCount[blueUnitIndex]) <= 0)
-        {
+        if (!DOGetValue(cellPos))
             return;
-        }
-
-        if (mapTilemap.GetTile(cellPos) == null || teams.ContainsKey((Vector2Int)cellPos) || count == 0 ||
-            fillTilemap.GetTile(cellPos) == grayFillTile)
-        {
-            return;
-        }
 
         GameUpdate(teamTurn, new Vector2Int(cellPos.x, cellPos.y));
         turn += 1;
+
+        createdPositionTransform.gameObject.SetActive(false);
+
+        for (int i = 0; i < redUnitCount.Length; i++)
+            _gameView.SetRedTeamUnitCount(i, redUnitCount[i], cursorRedUnitCount[i]);
+        for (int i = 0; i < blueUnitCount.Length; i++)
+            _gameView.SetBlueTeamUnitCount(i, blueUnitCount[i], cursorBlueUnitCount[i]);
+
         _gameView.SetTurnText(turn);
-        
-        for (int i = 0; i < redUnitCount.Length; i++)_gameView.SetRedTeamUnitCount(i,redUnitCount[i]);
-        for (int i = 0; i < blueUnitCount.Length; i++)_gameView.SetBlueTeamUnitCount(i,blueUnitCount[i]);
+        _gameView.SetTurnChanged();
+    }
+
+    private bool DOGetValue(Vector2Int cellPos)
+    {
+        var count = attackPosts
+            .Select(p => p + cellPos)
+            .Count(p => fillTilemap.GetTile((Vector3Int)p) && ((TeamTurn == Team.Red && power[p] > 0) ||
+                                                               (TeamTurn == Team.Blue && power[p] < 0)));
+        var vector3Int = (Vector3Int)cellPos;
+        var i = (TeamTurn == Team.Red ? cursorRedUnitCount[redUnitIndex] : cursorBlueUnitCount[blueUnitIndex]);
+
+        if (i > 0 & mapTilemap.GetTile(vector3Int) != null && !teams.ContainsKey(cellPos) && count != 0 &&
+            fillTilemap.GetTile(vector3Int) != grayFillTile)
+        {
+            return true;
+        }
+
+        return false;
     }
 
 
     private bool IsGameMapRange(Vector2Int pos) => mapTilemap.GetTile((Vector3Int)pos) != null;
+    public Team TeamTurn => turn % 2 == 0 ? Team.Red : Team.Blue;
+
 
     private void GameUpdate(Team teamTurn, Vector2Int pos)
     {
@@ -161,18 +207,21 @@ public class GameManager : MonoBehaviour
             fillTilemap.SetTile((Vector3Int)attackPos, grayFillTile);
         }
     }
-}
 
-public class AttackEvent
-{
-    public Vector2Int Pos;
-    public Vector2Int[] AttackPos;
-    public int Turn;
-    public Team Team;
-}
+    public GameObject rock;
 
-public enum Team
-{
-    Red,
-    Blue
+    private void GetTiles()
+    {
+        var rect = size;
+        rect.x += 2;
+        rect.y += 2;
+        rect.width -= 2;
+        rect.height -= 2;
+        for (int i = 0; i < 6; i++)
+        {
+            var vector3Int = new Vector3Int(Random.Range(rect.xMin, rect.xMax), Random.Range(rect.yMin, rect.yMax), 0);
+            mapTilemap.SetTile(vector3Int, null);
+            Instantiate(rock, mapTilemap.CellToWorld(vector3Int), Quaternion.identity);
+        }
+    }
 }
